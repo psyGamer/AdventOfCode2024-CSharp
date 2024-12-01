@@ -229,10 +229,12 @@ public static class Solver
         try {
             if (problemType.GetConstructor([typeof(string)]) is { } dayTextConstructor)
             {
+                string text = await File.ReadAllTextAsync(filePath);
+
                 for (int i = 0; i < config.MeasurementRepeats; i++)
                 {
                     sw.Restart();
-                    day = (IDay)dayTextConstructor.Invoke([await File.ReadAllTextAsync(filePath)]);
+                    day = (IDay)dayTextConstructor.Invoke([text]);
                     sw.Stop();
 
                     accumTicks += sw.ElapsedTicks;
@@ -240,10 +242,12 @@ public static class Solver
             }
             else if (problemType.GetConstructor([typeof(string[])]) is { } dayLinesConstructor)
             {
+                string[] lines = await File.ReadAllLinesAsync(filePath);
+
                 for (int i = 0; i < config.MeasurementRepeats; i++)
                 {
                     sw.Restart();
-                    day = (IDay)dayLinesConstructor.Invoke([await File.ReadAllLinesAsync(filePath)]);
+                    day = (IDay)dayLinesConstructor.Invoke([lines]);
                     sw.Stop();
 
                     accumTicks += sw.ElapsedTicks;

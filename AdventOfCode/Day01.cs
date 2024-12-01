@@ -16,26 +16,32 @@ public class Day01 : IDay
         """)
     ];
 
-    private readonly List<int> left = [];
-    private readonly List<int> right = [];
+    private readonly uint[] left;
+    private readonly uint[] right;
 
     public Day01(string[] input)
     {
-        foreach (string line in input)
+        Span<Range> splits = [default, default];
+
+        left = new uint[input.Length];
+        right = new uint[input.Length];
+
+        for (int i = 0; i < input.Length; i++)
         {
-            string[] split = line.Split("   ");
-            left.Add(int.Parse(split[0]));
-            right.Add(int.Parse(split[1]));
+            var line = input[0].AsSpan();
+
+            if (line.Length == 0) continue;
+            line.Split(splits, "   ");
+
+            left[i] = uint.Parse(line[splits[0]]);
+            right[i] = uint.Parse(line[splits[1]]);
         }
     }
 
     public ValueTask<string> Solve1()
     {
-        left.Sort();
-        right.Sort();
-
         ulong sum = 0;
-        foreach ((int l, int r) in left.Zip(right))
+        foreach ((uint l, uint r) in left.Order().Zip(right.Order()))
         {
             sum += (ulong)Math.Abs(l - r);
         }
@@ -49,6 +55,7 @@ public class Day01 : IDay
         {
             sum += (ulong)(leftVal * right.Count(v => v == leftVal));
         }
+
         return ValueTask.FromResult(sum.ToString());
     }
 }

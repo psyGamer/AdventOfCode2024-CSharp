@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Inputs\**" CopyToOutputDirectory="PreserveNewest"/>
+    <None Update="Inputs\**" CopyToOutputDirectory="Always"/>
   </ItemGroup>
 
 </Project>

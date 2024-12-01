@@ -17,6 +17,6 @@ await Solver.SolveAll(opt =>
     opt.ShowTotalElapsedTimePerDay = true;
     opt.ShowConstructorElapsedTime = true;
     opt.ShowOverallResults = true;
-    opt.MeasurementRepeats = 100;
+    opt.MeasurementRepeats = 1000;
 });
 #endif
