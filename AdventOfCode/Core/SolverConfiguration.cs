@@ -40,6 +40,11 @@ public class SolverConfiguration
     public string? ElapsedTimeFormatSpecifier { get; set; }
 
     /// <summary>
+    /// Amount of times each part should be repeated, to get more accure measurements
+    /// </summary>
+    public int MeasurementRepeats { get; set; } = 1;
+
+    /// <summary>
     /// Assemblies where the problems are located.
     /// Defaults to the entry assembly: [Assembly.GetEntryAssembly()!]
     /// </summary>
