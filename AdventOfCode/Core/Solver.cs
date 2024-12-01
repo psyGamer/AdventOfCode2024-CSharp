@@ -10,6 +10,7 @@ public static class Solver
 
     private sealed record ElapsedTime(double Constructor, double Part1, double Part2);
     private static double CalculateElapsedMilliseconds(Stopwatch stopwatch) => 1000 * stopwatch.ElapsedTicks / (double)Stopwatch.Frequency;
+    private static double CalculateElapsedMilliseconds(long ticks) => 1000 * ticks / (double)Stopwatch.Frequency;
 
     public static async Task Solve(uint dayNumber, Action<SolverConfiguration>? options = null)
     {
@@ -222,19 +223,31 @@ public static class Solver
 
         var sw = new Stopwatch();
 
-        IDay day;
+        long accumTicks = 0;
+
+        IDay day = null!;
         try {
             if (problemType.GetConstructor([typeof(string)]) is { } dayTextConstructor)
             {
-                sw.Start();
-                day = (IDay)dayTextConstructor.Invoke([await File.ReadAllTextAsync(filePath)]);
-                sw.Stop();
+                for (int i = 0; i < config.MeasurementRepeats; i++)
+                {
+                    sw.Restart();
+                    day = (IDay)dayTextConstructor.Invoke([await File.ReadAllTextAsync(filePath)]);
+                    sw.Stop();
+
+                    accumTicks += sw.ElapsedTicks;
+                }
             }
             else if (problemType.GetConstructor([typeof(string[])]) is { } dayLinesConstructor)
             {
-                sw.Start();
-                day = (IDay)dayLinesConstructor.Invoke([await File.ReadAllLinesAsync(filePath)]);
-                sw.Stop();
+                for (int i = 0; i < config.MeasurementRepeats; i++)
+                {
+                    sw.Restart();
+                    day = (IDay)dayLinesConstructor.Invoke([await File.ReadAllLinesAsync(filePath)]);
+                    sw.Stop();
+
+                    accumTicks += sw.ElapsedTicks;
+                }
             }
             else
             {
@@ -248,16 +261,16 @@ public static class Solver
             return null;
         }
 
-        double elapsedMillisecondsCtor = CalculateElapsedMilliseconds(sw);
+        double elapsedMillisecondsCtor = CalculateElapsedMilliseconds(accumTicks) / config.MeasurementRepeats;
         if (config.ShowConstructorElapsedTime)
         {
             RenderSolveRow(table, problemTitle, $"{day.GetType().Name}()", "-----------", elapsedMillisecondsCtor, config);
         }
 
-        (string solution1, double elapsedMillisecondsPart1) = await SolvePart(day.Solve1, day);
+        (string solution1, double elapsedMillisecondsPart1) = await SolvePart(day.Solve1, config);
         RenderSolveRow(table, problemTitle, "Part 1", solution1, elapsedMillisecondsPart1, config);
 
-        (string solution2, double elapsedMillisecondsPart2) = await SolvePart(day.Solve2, day);
+        (string solution2, double elapsedMillisecondsPart2) = await SolvePart(day.Solve2, config);
         RenderSolveRow(table, problemTitle, "Part 2", solution2, elapsedMillisecondsPart2, config);
 
         if (config.ShowTotalElapsedTimePerDay)
@@ -307,7 +320,7 @@ public static class Solver
 
             if (test.Part1Result != null)
             {
-                (string solution1, _) = await SolvePart(day.Solve1, day);
+                (string solution1, _) = await SolvePart(day.Solve1, config);
                 bool match = string.Equals(solution1, test.Part1Result);
                 RenderTestRow(table, problemTitle, "Part 1", solution1, test.Part1Result, match);
 
@@ -316,7 +329,7 @@ public static class Solver
 
             if (test.Part2Result != null)
             {
-                (string solution2, _) = await SolvePart(day.Solve2, day);
+                (string solution2, _) = await SolvePart(day.Solve2, config);
                 bool match = string.Equals(solution2, test.Part2Result);
                 RenderTestRow(table, problemTitle, "Part 2", solution2, test.Part2Result, match);
 
@@ -330,29 +343,32 @@ public static class Solver
         return success;
     }
 
-    private static async ValueTask<(string solution, double elapsedTime)> SolvePart(Func<ValueTask<string>> solve, IDay day)
+    private static async ValueTask<(string solution, double elapsedTime)> SolvePart(Func<ValueTask<string>> solve, SolverConfiguration config)
     {
         Stopwatch stopwatch = new();
-        string solution;
+        string solution = null!;
+
         try
         {
-            stopwatch.Start();
-            solution = await solve();
+            for (int i = 0; i < config.MeasurementRepeats; i++)
+            {
+                stopwatch.Restart();
+                solution = await solve();
+                stopwatch.Stop();
+            }
         }
         catch (NotImplementedException)
         {
             solution = "[[Not implemented]]";
+            stopwatch.Stop();
         }
         catch (Exception e)
         {
             solution = e.Message + Environment.NewLine + e.StackTrace;
-        }
-        finally
-        {
             stopwatch.Stop();
         }
 
-        double elapsedMilliseconds = CalculateElapsedMilliseconds(stopwatch);
+        double elapsedMilliseconds = CalculateElapsedMilliseconds(stopwatch) / config.MeasurementRepeats;
         return (solution, elapsedMilliseconds);
     }
 
