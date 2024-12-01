@@ -134,6 +134,8 @@ public static class Solver
                 });
         }
 
+        var totalElapsedTime = new List<ElapsedTime>();
+
         var solveTable = GetSolveTable();
         await AnsiConsole.Live(solveTable)
             .AutoClear(false)
@@ -146,9 +148,14 @@ public static class Solver
 
                 foreach (var problemType in problemTypes)
                 {
-                    await SolveProblem(problemType, solveTable, config);
+                    if (await SolveProblem(problemType, solveTable, config) is { } elapsedTime)
+                    {
+                        totalElapsedTime.Add(elapsedTime);
+                    }
                 }
             });
+
+        RenderOverallResultsPanel(totalElapsedTime, config);
     }
 
     public static async Task SolveAll(Action<SolverConfiguration>? options = null)
@@ -181,6 +188,8 @@ public static class Solver
                 });
         }
 
+        var totalElapsedTime = new List<ElapsedTime>();
+
         var solveTable = GetSolveTable();
         await AnsiConsole.Live(solveTable)
             .AutoClear(false)
@@ -192,9 +201,14 @@ public static class Solver
 
                 foreach (var problemType in problemTypes)
                 {
-                    await SolveProblem(problemType, solveTable, config);
+                    if (await SolveProblem(problemType, solveTable, config) is { } elapsedTime)
+                    {
+                        totalElapsedTime.Add(elapsedTime);
+                    }
                 }
             });
+
+        RenderOverallResultsPanel(totalElapsedTime, config);
     }
 
     private static async ValueTask<ElapsedTime?> SolveProblem(Type problemType, Table table, SolverConfiguration config)
@@ -433,6 +447,48 @@ public static class Solver
         table.AddEmptyRow();
 
         return new ElapsedTime(constructorElapsedTime, elapsedMillisecondsPart1, elapsedMillisecondsPart2);
+    }
+    private static void RenderOverallResultsPanel(List<ElapsedTime> totalElapsedTime, SolverConfiguration config)
+    {
+        if (config.ShowOverallResults != true || totalElapsedTime.Count <= 1)
+        {
+            return;
+        }
+
+        double totalConstructors = totalElapsedTime.Sum(t => t.Constructor);
+        double totalPart1 = totalElapsedTime.Sum(t => t.Part1);
+        double totalPart2 = totalElapsedTime.Sum(t => t.Part2);
+        double total = totalPart1 + totalPart2 + (config.ShowConstructorElapsedTime ? totalConstructors : 0);
+
+        var grid = new Grid()
+            .AddColumn(new GridColumn().NoWrap().PadRight(4))
+            .AddColumn()
+            .AddRow()
+            .AddRow($"[bold]Total ({totalElapsedTime.Count} days[/])", FormatTime(total, config, useColor: false));
+
+        if (config.ShowConstructorElapsedTime)
+        {
+            grid.AddRow("Total constructors", FormatTime(totalConstructors, config, useColor: false));
+        }
+
+        grid
+            .AddRow("Total parts 1", FormatTime(totalPart1, config, useColor: false))
+            .AddRow("Total parts 2", FormatTime(totalPart2, config, useColor: false))
+            .AddRow()
+            .AddRow("[bold]Mean (per day)[/]", FormatTime(total / totalElapsedTime.Count, config));
+
+        if (config.ShowConstructorElapsedTime)
+        {
+            grid.AddRow("Mean constructors", FormatTime(totalElapsedTime.Average(t => t.Constructor), config));
+        }
+
+        grid
+            .AddRow("Mean parts 1", FormatTime(totalElapsedTime.Average(t => t.Part1), config))
+            .AddRow("Mean parts 2", FormatTime(totalElapsedTime.Average(t => t.Part2), config));
+
+        AnsiConsole.Write(
+            new Panel(grid)
+                .Header("[b] Overall results [/]", Justify.Center));
     }
 
     private static void RenderTestRow(Table table, string problemTitle, string part, string actual, string expected, bool success)
